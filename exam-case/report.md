@@ -7,7 +7,13 @@ Teacher: `<insert here>`
 
 # Phase 0 — Load to Raw
 
-<!-- Briefly describe your loading approach: how you consolidated files, what contextual fields you derived from filenames, and any decisions you made. -->
+The raw data consists of four file types repeated across 17 race events: lap-level data (`_laps.csv`), session results (`_session_results.json`), weather measurements (`_weather.csv`), and race control messages (`_race_control_messages.csv`), plus a single `schedule.txt` file with event metadata.
+
+Each file type was consolidated into one raw table in DuckDB (`raw_laps`, `raw_session_results`, `raw_weather`, `raw_race_control`, `raw_schedule`), combining all 17 race files per type using `pd.concat`. The race control table was loaded for completeness but is not used in the analytical questions.
+
+The filename encodes three contextual fields not present inside the files themselves — `race_date`, `circuit`, and `season` — which were extracted via string parsing and added as columns to every row before loading. This is not a transformation; it preserves information that would otherwise be lost.
+
+No cleaning, type correction, renaming, or business logic was applied at this stage. All raw values arrive in DuckDB exactly as they appear in the source files.
 
 ---
 
