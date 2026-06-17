@@ -19,7 +19,17 @@ No cleaning, type correction, renaming, or business logic was applied at this st
 
 # Phase 1 — Staging
 
-<!-- Describe your staging decisions: what you renamed, what data types you corrected, what structural issues you fixed, and what tests you added. Explain why. -->
+Four staging models were created, one per raw source used in the analytical questions. The race control table was not staged as it is not needed for either question.
+
+**stg_laps** is the most complex model. The `LapTime` column arrives as a timedelta string (`"0 days 00:01:28.179000"`) and is converted to total seconds using string splitting — this is necessary because DuckDB cannot aggregate or compare timedelta strings. Rows where `LapTime` is null or `"nan"` (2.7% of rows) and rows where `IsAccurate = False` (14.2%) are excluded at this stage. Inaccurate laps are laps recorded under safety car, VSC, or with telemetry issues; including them would distort pace comparisons. `DriverNumber`, `LapNumber`, and `Position` arrive as floats and are cast to their correct types. Boolean columns (`FreshTyre`, `IsPersonalBest`) arrive as strings and are cast to BOOLEAN. Sector times and speed trap columns are dropped as they are not needed for the analytical questions.
+
+**stg_session_results** requires minimal cleaning. `Position` and `GridPosition` arrive as floats and are cast to INTEGER. The `Status` field is kept as-is with all 15 distinct values preserved — the filter to `Status = 'Finished'` is a business rule that belongs in the intermediate model, not staging. `TeamName` is kept despite being inconsistent across seasons because `TeamId` (which is stable) is used as the join key in the mart layer. Columns that are always null in race results (`Q1`, `Q2`, `Q3`), always empty (`HeadshotUrl`, `CountryCode`), or redundant (`BroadcastName`, `TeamColor`) are dropped.
+
+**stg_weather** has one structural issue: `Rainfall` arrives as the string `"True"`/`"False"` and is cast to BOOLEAN. All numeric columns (`AirTemp`, `TrackTemp`, `Humidity`, `Pressure`, `WindSpeed`) are confirmed as floats and kept as-is.
+
+**stg_schedule** drops all session date columns (ten columns covering practice and qualifying dates) as only event-level metadata is needed. `EventDate` is cast to DATE and `Year` is renamed to `season` for consistency with other models.
+
+Tests added cover `not_null` on all key identifiers and join fields, and `accepted_values` on `race_status` to confirm no unexpected status values appear in future data.
 
 ---
 

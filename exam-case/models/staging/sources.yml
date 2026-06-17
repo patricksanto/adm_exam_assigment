@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: main
+    tables:
+      - name: raw_laps
+      - name: raw_session_results
+      - name: raw_weather
+      - name: raw_race_control
+      - name: raw_schedule

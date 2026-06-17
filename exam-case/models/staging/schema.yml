@@ -1,0 +1,125 @@
+version: 2
+
+models:
+  - name: stg_laps
+    description: >
+      Cleaned lap-level data for all 17 F1 races. Each row represents one lap
+      driven by one driver. Rows with null or inaccurate lap times are excluded
+      (IsAccurate = False removes ~14% of raw laps). LapTime is converted from
+      a timedelta string to total seconds.
+    columns:
+      - name: race_date
+        description: Date of the race, derived from the source filename.
+        tests:
+          - not_null
+      - name: circuit
+        description: Circuit name, derived from the source filename.
+        tests:
+          - not_null
+      - name: season
+        description: Season year, derived from the source filename.
+        tests:
+          - not_null
+      - name: driver_abbreviation
+        description: Three-letter driver abbreviation (e.g. HAM, VER).
+        tests:
+          - not_null
+      - name: driver_number
+        description: Driver racing number as string.
+        tests:
+          - not_null
+      - name: lap_time_seconds
+        description: Lap duration in seconds, converted from timedelta string format.
+        tests:
+          - not_null
+      - name: lap_number
+        description: Lap number within the race.
+        tests:
+          - not_null
+      - name: team_name
+        description: Constructor team name. May vary across seasons due to rebranding.
+        tests:
+          - not_null
+      - name: tyre_compound
+        description: Tyre compound used (SOFT, MEDIUM, HARD, WET, INTERMEDIATE).
+
+  - name: stg_session_results
+    description: >
+      Cleaned race session results. One row per driver per race (20 drivers × 17
+      races = 340 rows). Includes final classification, race status, and team.
+      The Status field is kept as-is; filtering to Finished drivers happens in
+      the intermediate model.
+    columns:
+      - name: race_date
+        description: Date of the race.
+        tests:
+          - not_null
+      - name: driver_number
+        description: Driver racing number as string.
+        tests:
+          - not_null
+      - name: driver_full_name
+        description: Full name of the driver.
+        tests:
+          - not_null
+      - name: team_id
+        description: >
+          Stable team identifier (e.g. 'mercedes', 'sauber'). Used as the join
+          key for dim_team because TeamName changes with rebranding.
+        tests:
+          - not_null
+      - name: race_status
+        description: >
+          Race outcome: Finished, +1 Lap, +2 Laps, Accident, Collision, Engine,
+          Power Unit, Brakes, Hydraulics, Retired, Gearbox, Overheating,
+          Disqualified, Puncture, Transmission.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Finished', '+1 Lap', '+2 Laps', 'Accident', 'Collision',
+                       'Engine', 'Power Unit', 'Brakes', 'Hydraulics', 'Retired',
+                       'Gearbox', 'Overheating', 'Disqualified', 'Puncture',
+                       'Transmission']
+      - name: finish_position
+        description: Final numeric race position (1–20).
+
+  - name: stg_weather
+    description: >
+      Cleaned weather measurements sampled throughout each race session
+      (~148 samples per race). One row per time sample per race.
+      Rainfall cast to boolean; all temperature and pressure fields confirmed
+      as float.
+    columns:
+      - name: race_date
+        tests:
+          - not_null
+      - name: is_raining
+        description: True if rainfall was detected during this sample.
+        tests:
+          - not_null
+      - name: air_temp_c
+        description: Air temperature in Celsius. Range in dataset: 14.6–34.1°C.
+        tests:
+          - not_null
+      - name: track_temp_c
+        description: Track surface temperature in Celsius. Range: 18.9–54.6°C.
+        tests:
+          - not_null
+
+  - name: stg_schedule
+    description: >
+      Race schedule metadata. One row per race event (17 rows). Provides
+      circuit context including country, location, and total laps. Session
+      date columns dropped as not needed for analytical questions.
+    columns:
+      - name: season
+        tests:
+          - not_null
+      - name: circuit
+        description: Event name used as join key with other tables (e.g. 'Dutch Grand Prix').
+        tests:
+          - not_null
+      - name: total_laps
+        description: Total number of scheduled laps in the race.
+        tests:
+          - not_null
