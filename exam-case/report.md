@@ -37,19 +37,45 @@ Tests added cover `not_null` on all key identifiers and join fields, and `accept
 
 ## Analytical Questions
 
-<!-- State the predefined analytical question. State your additional analytical question. Briefly justify both. -->
+**Q1 (predefined):** What is the difference between the average lap time of each driver and the average lap time of the race winner in the same race?
+
+This question requires lap-level data joined with session results to identify the winner per race. Only drivers classified as `Finished` are included, as lapped or retired drivers did not complete the full race distance and their average pace would not represent a comparable competitive effort.
+
+**Q2 (additional):** How does the average lap time gap between each driver and the race winner vary across different race conditions — wet versus dry races and track temperature ranges?
+
+This question builds directly on Q1 and adds race conditions as an analytical dimension. The stakeholder brief explicitly requires the additional question to incorporate at least one race condition variable. Wet versus dry and track temperature were chosen because they are directly available in the weather data, operationally meaningful to performance engineers, and produce dimensions that can be reused across the star model. One limitation is that only 2 of the 17 races in this dataset had rainfall, which constrains the statistical depth of the wet/dry split. This is noted as a prototype constraint — the architecture is correct and extensible for larger datasets.
 
 ## Foundation
 
-<!-- Which staging models are required? What join keys combine them? What base fields are carried forward? -->
+**Staging models required:**
+- `stg_laps` — provides the core grain (one lap per driver per race) and the `lap_time_seconds` metric
+- `stg_session_results` — provides `finish_position`, `race_status`, `team_id`, and driver identity fields
+- `stg_weather` — provides `Rainfall` and `TrackTemp` per race for condition classification
+
+**Join keys:**
+- `stg_laps` joined to `stg_session_results` on `race_date + driver_number`
+- Weather is aggregated to one row per `race_date` (max rainfall, avg track temp) before joining on `race_date`
+
+**One row represents:** one lap driven by one driver in one race.
+
+**Base fields carried forward:** `race_date`, `circuit`, `season`, `driver_number`, `driver_abbreviation`, `driver_full_name`, `team_name`, `team_id`, `lap_number`, `lap_time_seconds`, `tyre_compound`, `tyre_life`, `finish_position`, `classified_position`, `race_status`
 
 ## Added Fields
 
-<!-- For each field you added: name, how it is derived or defined, and why it is needed. -->
+| Field | Type | Derived from | Why needed |
+|---|---|---|---|
+| `is_finished` | categorical | `race_status = 'Finished'` | Q1 and Q2 filter — only finished drivers are included in pace comparisons |
+| `is_wet_race` | categorical | `MAX(is_raining)` per race → `'wet'` or `'dry'` | Q2 dimension — wet vs dry condition |
+| `avg_track_temp_c` | calculated | `AVG(track_temp_c)` per race from stg_weather | Input for track_temp_category |
+| `track_temp_category` | categorical | `avg_track_temp_c`: `<30='cool'`, `30-44='warm'`, `>=45='hot'` | Q2 dimension — temperature condition |
 
 ## Intermediate Model Design
 
-<!-- Describe your intermediate model design. The DBML diagram in design.dbml must match this section. -->
+The intermediate model is designed as a single wide table `int_race_laps` that preserves the lap-level grain throughout. No aggregation is applied. Weather data is pre-aggregated per race in a sub-CTE before joining — this produces one weather row per race which is then attached to every lap of that race. This does not reduce the grain; it adds race-level context to each lap row.
+
+The `is_finished` field is derived here rather than in staging because it is a business rule (the stakeholder specifies only finished drivers), not a technical data quality fix. The temperature categories (`cool`, `warm`, `hot`) are defined here because they represent analytical classification logic that must live in dbt, not in the dashboard.
+
+The DBML diagram in `design.dbml` was drawn before writing the SQL and represents the planned design.
 
 ---
 

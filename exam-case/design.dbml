@@ -1,0 +1,30 @@
+// ─────────────────────────────────────────────────────────────
+// ADM 2026 — F1 Competitiveness Analysis
+// design.dbml — planned before SQL implementation
+// ─────────────────────────────────────────────────────────────
+
+// ─── PHASE 2: INTERMEDIATE MODEL ─────────────────────────────
+// One row = one lap driven by one driver in one race
+// No aggregation. Every row still represents one lap event.
+
+Table int_race_laps {
+  race_date             date      [note: "derived from filename"]
+  circuit               varchar   [note: "derived from filename"]
+  season                int       [note: "derived from filename"]
+  driver_number         varchar
+  driver_abbreviation   varchar
+  driver_full_name      varchar
+  team_name             varchar   [note: "display name, may vary across seasons"]
+  team_id               varchar   [note: "stable key e.g. mercedes, sauber"]
+  lap_number            int
+  lap_time_seconds      float     [note: "converted from timedelta string in staging"]
+  tyre_compound         varchar
+  tyre_life             int
+  finish_position       int       [note: "NULL for non-finishers"]
+  classified_position   varchar   [note: "1-20 or R"]
+  race_status           varchar   [note: "Finished / +1 Lap / Engine / etc."]
+  is_finished           boolean   [note: "true only when race_status = Finished"]
+  is_wet_race           varchar   [note: "wet or dry — derived from weather Rainfall"]
+  avg_track_temp_c      float     [note: "average track temp across all weather samples for this race"]
+  track_temp_category   varchar   [note: "cool (<30C) / warm (30-44C) / hot (>=45C)"]
+}
