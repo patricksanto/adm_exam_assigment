@@ -1,0 +1,10 @@
+services:
+  python:
+    image: teachercraig/adm-course:2026.2
+    container_name: adm-working-dev
+    volumes:
+      - ..:/adm-workspace:cached
+    working_dir: /adm-workspace
+    command: sleep infinity
+    environment:
+      - PYTHONUNBUFFERED=1
