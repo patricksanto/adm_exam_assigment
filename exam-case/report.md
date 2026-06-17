@@ -83,21 +83,59 @@ The DBML diagram in `design.dbml` was drawn before writing the SQL and represent
 
 ## Analytical Questions
 
-<!-- Restate both analytical questions. For each, identify which fact table pair it produces. -->
+**Q1:** What is the difference between the average lap time of each driver and the average lap time of the race winner in the same race?
+→ Produces `fct_driver_pace_gap` (primary) and `fct_driver_pace_gap_by_season` (roll-up)
+
+**Q2:** How does the average lap time gap between each driver and the race winner vary across different race conditions — wet versus dry and track temperature?
+→ Produces `fct_pace_gap_by_condition` (primary) and `fct_pace_gap_by_condition_season` (roll-up)
 
 ## Each Row Represents (Grain)
 
-<!-- For each fact table, write: "Each row represents one … in one …" -->
+| Fact table | Grain |
+|---|---|
+| `fct_driver_pace_gap` | Each row represents one driver in one race |
+| `fct_driver_pace_gap_by_season` | Each row represents one driver at one circuit in one season |
+| `fct_pace_gap_by_condition` | Each row represents one driver in one race with its condition context |
+| `fct_pace_gap_by_condition_season` | Each row represents one driver in one condition group in one season |
 
 ## Metrics
 
-<!-- For each fact table, define metrics using the table format:
-| Metric name | Source field | Statistical operation | Justification |
--->
+**fct_driver_pace_gap**
+
+| Metric | Source field | Operation | Justification |
+|---|---|---|---|
+| `avg_lap_time_s` | `lap_time_seconds` | AVG | Represents the typical pace of this driver in this race |
+| `winner_avg_lap_time_s` | `lap_time_seconds` (winner only) | AVG | The reference pace for the race — the benchmark every driver is measured against |
+| `lap_time_gap_s` | derived | `avg_lap_time_s - winner_avg_lap_time_s` | The core metric of Q1. A positive value means slower than the winner; zero means the driver is the winner. SUM or MAX would not answer the question — only AVG produces a representative pace comparison |
+| `lap_count` | `lap_number` | COUNT | Context — a gap based on 3 laps carries far less weight than one based on 50 laps |
+
+**fct_driver_pace_gap_by_season**
+
+| Metric | Source field | Operation | Justification |
+|---|---|---|---|
+| `avg_lap_time_gap_s` | per-race gap | AVG | Seasonal average gap reveals trend, smoothing out outlier races |
+| `min_gap_s` | per-race gap | MIN | Best performance in the season — shows peak competitiveness |
+| `max_gap_s` | per-race gap | MAX | Worst performance — shows reliability ceiling |
+| `race_count` | `race_date` | COUNT DISTINCT | Without this, comparing teams with 2 vs 6 races in a season would be misleading |
+
+**fct_pace_gap_by_condition** — same metrics as fct_driver_pace_gap, at the same grain, with condition key added.
+
+**fct_pace_gap_by_condition_season**
+
+| Metric | Source field | Operation | Justification |
+|---|---|---|---|
+| `avg_lap_time_gap_s` | per-race gap | AVG | Shows whether a driver is consistently better or worse under certain conditions across a season |
+| `race_count` | `race_date` | COUNT DISTINCT | Critical context — wet races are rare (only 2 in dataset), so volume must always be visible |
 
 ## Star Model Design
 
-<!-- Describe your star model design: dimensions, fact tables, and how they connect. The DBML diagram in design.dbml must match this section. -->
+Four dimensions were created. `dim_driver` and `dim_race` are the primary dimensions, used by all four fact tables. `dim_circuit` is used by the season roll-up only. `dim_condition` is used by the two Q2 fact tables.
+
+`dim_driver` uses `driver_number` as the natural key. Because drivers may have raced for different teams across seasons, the `team_name` and `team_id` in this dimension reflect the values from the intermediate model — which means a driver like Hamilton appears once per team combination. This is a known limitation of the prototype scope.
+
+The winner is identified per race using `finish_position = 1` from `stg_session_results`, not from lap-level position data which contains nulls and floats. All fact tables share the same winner identification logic defined in the intermediate layer.
+
+The DBML in `design.dbml` was written before the SQL and the implementation matches the planned design without deviation.
 
 ---
 
