@@ -76,10 +76,12 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ['Finished', '+1 Lap', '+2 Laps', 'Accident', 'Collision',
-                       'Engine', 'Power Unit', 'Brakes', 'Hydraulics', 'Retired',
-                       'Gearbox', 'Overheating', 'Disqualified', 'Puncture',
-                       'Transmission']
+              values: ['Finished', '+1 Lap', '+2 Laps', '+3 Laps', 'Accident',
+                       'Collision', 'Engine', 'Power Unit', 'Brakes', 'Hydraulics',
+                       'Retired', 'Gearbox', 'Overheating', 'Disqualified', 'Puncture',
+                       'Transmission', 'Wheel', 'Turbo', 'Suspension', 'Vibrations',
+                       'Differential', 'Oil leak', 'Water pressure', 'Undertray',
+                       'Steering']
       - name: finish_position
         description: Final numeric race position (1–20).
 
