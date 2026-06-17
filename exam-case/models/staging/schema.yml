@@ -98,11 +98,11 @@ models:
         tests:
           - not_null
       - name: air_temp_c
-        description: Air temperature in Celsius. Range in dataset: 14.6–34.1°C.
+        description: "Air temperature in Celsius. Range in dataset: 14.6 to 34.1 C."
         tests:
           - not_null
       - name: track_temp_c
-        description: Track surface temperature in Celsius. Range: 18.9–54.6°C.
+        description: "Track surface temperature in Celsius. Range: 18.9 to 54.6 C."
         tests:
           - not_null
 
